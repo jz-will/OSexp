@@ -10,7 +10,16 @@ class BitMap {
 public:
 	BitMap(){}
 	~BitMap() {}
-	bool IsEmpty(prio_array_t array){}
-	void Execute(){}
+	bool IsEmpty(prio_array_t array);
+	void Execute();
 
 };
+
+bool BitMap::IsEmpty(prio_array_t array)
+{
+	return false;
+}
+
+void BitMap::Execute()
+{
+}

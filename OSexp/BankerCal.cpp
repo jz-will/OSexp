@@ -7,5 +7,10 @@
 class BankerCal {
 	BankerCal() {}
 	~BankerCal() {}
-	
+	bool IsSave(PCB pcb);
 };
+
+bool BankerCal::IsSave(PCB pcb)
+{
+	return false;
+}
