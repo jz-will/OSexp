@@ -12,7 +12,6 @@ public:
 	~BitMap() {}
 	bool IsEmpty(prio_array_t array);
 	void Execute();
-
 };
 
 bool BitMap::IsEmpty(prio_array_t array)

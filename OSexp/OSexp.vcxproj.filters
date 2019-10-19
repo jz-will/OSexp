@@ -21,10 +21,10 @@
     <ClCompile Include="Schedule.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="BitMap.cpp">
+    <ClCompile Include="BankerCal.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="BankerCal.cpp">
+    <ClCompile Include="Myhead.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -34,6 +34,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="readme.md" />
+    <None Include="README.md" />
   </ItemGroup>
 </Project>

@@ -1,40 +1,108 @@
 #include"Myhead.h"
 
-
-/*
-O(1)调度算法：
-	1、初始化队列与双向链表；
-	2、运行前计算时间片；
-	3、先由位图判断是否有进程，有则运行Active，用完时间片后放到Expired；(两个指针分别指向不同的prios_array_t)
-	4、交换Active和Expired，重复3，到进程全部运行完毕;
-	5、有新进程进入就绪队列时插入相应位置，与正在运行进程比较优先级，在前则运行，在后则等待运行。
-*/
-/* bitset说明：
-	bitset::any()->是否存在1；
-	bitset::set(pos)->设置某个位置为1
-	bitset::reset(pos)->设置某个位置为0
-	bitset可直接用数组形式访问某个位置
-
-*/
-class Processing {
-private:
-	prio_array_t first_array[ARRAY_SIZE];
-	prio_array_t second_array[ARRAY_SIZE];
-	Runqueue Runq;
-	bitset<BITMAP_SIZE> bitmap;
-
-public:
-	Processing();
-	~Processing() {}
-	void Add_To_Array(PCB pcb);
-	void Execute();
-};
-/*初始化：first_array设置为原型，second_*/
-Processing::Processing()
+int Processing::SetTimeSlice(PCB pcb)
 {
-
+	if (pcb.static_prio >= 120)
+		pcb.Time_slice = (140 - pcb.static_prio) * 5;
+	else
+		pcb.Time_slice = (140 - pcb.static_prio) * 20;
+	return pcb.Time_slice;
 }
 
-void Processing::Add_To_Array(PCB pcb)
+int Processing::GetBonus(PCB pcb)
+{
+	int bonus;
+	if (pcb.sleep_avg >= 0 && pcb.sleep_avg < 10)
+	{
+		bonus = 0;
+	}
+	else if (pcb.sleep_avg >= 10 && pcb.sleep_avg < 20)
+	{
+		bonus = 1;
+	}
+	else if (pcb.sleep_avg >= 20 && pcb.sleep_avg < 30)
+	{
+		bonus = 2;
+	}
+	else if (pcb.sleep_avg >= 30 && pcb.sleep_avg < 40)
+	{
+		bonus = 3;
+	}
+	else if (pcb.sleep_avg >= 40 && pcb.sleep_avg < 50)
+	{
+		bonus = 4;
+	}
+	else if (pcb.sleep_avg >= 50 && pcb.sleep_avg < 60)
+	{
+		bonus = 5;
+	}
+	else if (pcb.sleep_avg >= 60 && pcb.sleep_avg < 70)
+	{
+		bonus = 6;
+	}
+	else if (pcb.sleep_avg >= 70 && pcb.sleep_avg < 80)
+	{
+		bonus = 7;
+	}
+	else if (pcb.sleep_avg >= 80 && pcb.sleep_avg < 90)
+	{
+		bonus = 8;
+	}
+	else if (pcb.sleep_avg >= 90 && pcb.sleep_avg < 100)
+	{
+		bonus = 9;
+	}
+	else if (pcb.sleep_avg == 100)
+	{
+		bonus = 10;
+	}
+	return bonus;
+}
+
+//初始化：PCB，数组，位图
+void  Processing::Inital()
+{
+	Runq.array[0].bitmap.reset();
+	PCB pcb[8];
+	int NeedTime[8] = { 2,6,5,8,7,4,9,3 };
+	int static_prio[8] = { 2,8,45,99,130,122,134,125 };
+	int NeedResource[8][3] = { {2,1,5},{1,3,2},{3,5,4},{6,4,1},{5,3,4},{2,5,6},{8,5,3},{5,6,7} };	//A:32, B:32, C:32 -->(8, 8, 8)
+	for (int i = 0; i < 8; i++)
+	{
+		pcb[i].next = NULL;
+		pcb[i].prior = NULL;
+		pcb[i].name = i + 1;
+		pcb[i].RunTime = 0;
+		pcb[i].sleep_avg = 0;
+		pcb[i].status = 'R';
+		// pcb[i].prio = 2;
+		pcb[i].NeedTime = NeedTime[i];
+		pcb[i].static_prio = static_prio[i];
+		Runq.array[0].bitmap[static_prio[i]] = 1;
+		if (pcb[i].static_prio >= MAX_RT_PRIO)
+		{
+			//普通进程
+			pcb[i].Time_slice = SetTimeSlice(pcb[i]);
+			pcb[i].prio = max(100, min(pcb[i].static_prio - GetBonus(pcb[i]) + 5, 139));
+			pcb[i].rt_priority = -1;
+		}
+		else if(pcb[i].static_prio < MAX_RT_PRIO)
+		{
+			//实时进程
+			pcb[i].rt_priority = pcb[i].static_prio;
+			pcb[i].prio = MAX_RT_PRIO - 1 - pcb[i].rt_priority;
+		}
+		pcb[i].NeedResource[0] = NeedResource[i][0];
+		pcb[i].NeedResource[1] = NeedResource[i][1];
+		pcb[i].NeedResource[2] = NeedResource[i][2];
+	}
+}
+
+void Processing::Insert_To_Array(PCB pcb)
 {
 }
+
+void Processing::print()
+{
+}
+

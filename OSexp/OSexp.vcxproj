@@ -119,12 +119,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BankerCal.cpp" />
-    <ClCompile Include="BitMap.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Myhead.cpp" />
     <ClCompile Include="Schedule.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="readme.md" />
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
