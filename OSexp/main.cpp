@@ -9,7 +9,9 @@
 int main()
 {
 	Processing sched;
-	//sched.Inital();
+	sched.Inital();
+	sched.print();
+	system("pause");
 	BankerCal BankCal;
 	return 0;
 }

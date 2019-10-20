@@ -22,10 +22,10 @@ typedef struct PCB {
 	char status;
 	struct PCB *prior;
 	struct PCB *next;
-	unsigned int prio;				//100~139 -- 优先级数字越大，优先级越低，决定调度
-	unsigned int Time_slice;
+	unsigned int prio;				//0~139 -- 优先级数字越大，优先级越低，决定调度
+	unsigned int Time_slice;		//时间片
 	unsigned int static_prio;		//静态优先级100~139 -- 决定时间片大小
-	unsigned int rt_priority;		//实时进程的优先级
+	int rt_priority;				//实时进程的优先级
 	unsigned int sleep_avg;			//等待时间，越久表示越急迫需要运行
 	int policy;						//调度方式
 	unsigned int NeedResource[3];	//需要分配的资源
@@ -69,7 +69,7 @@ class Processing
 {
 private:
 	Runqueue Runq;
-	PCB *pcb;
+	PCB pcb[8];
 public:
 	Processing() {}
 	~Processing() {}
@@ -77,8 +77,7 @@ public:
 	int GetBonus(PCB pcb);
 	
 	void Inital();
-
-	//void Execute();
+	void Execute();
 	void Insert_To_Array(PCB pcb);
 	void print();
 };

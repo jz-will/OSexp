@@ -63,9 +63,10 @@ int Processing::GetBonus(PCB pcb)
 void  Processing::Inital()
 {
 	Runq.array[0].bitmap.reset();
-	PCB pcb[8];
 	int NeedTime[8] = { 2,6,5,8,7,4,9,3 };
-	int static_prio[8] = { 2,8,45,99,130,122,134,125 };
+	int rt_priority[8] = { 2,15,65,99,-1,-1,-1,-1 };
+	int static_prio[8] = { 100,123,130,132,130,122,134,125 };
+	int policy[8] = { SCHED_RR,SCHED_FIFO,SCHED_RR,SCHED_FIFO,SCHED_NORMAL ,SCHED_NORMAL, SCHED_NORMAL, SCHED_NORMAL };
 	int NeedResource[8][3] = { {2,1,5},{1,3,2},{3,5,4},{6,4,1},{5,3,4},{2,5,6},{8,5,3},{5,6,7} };	//A:32, B:32, C:32 -->(8, 8, 8)
 	for (int i = 0; i < 8; i++)
 	{
@@ -75,21 +76,19 @@ void  Processing::Inital()
 		pcb[i].RunTime = 0;
 		pcb[i].sleep_avg = 0;
 		pcb[i].status = 'R';
-		// pcb[i].prio = 2;
 		pcb[i].NeedTime = NeedTime[i];
 		pcb[i].static_prio = static_prio[i];
 		Runq.array[0].bitmap[static_prio[i]] = 1;
-		if (pcb[i].static_prio >= MAX_RT_PRIO)
+		pcb[i].rt_priority = rt_priority[i];
+		if (pcb[i].policy == SCHED_NORMAL)
 		{
 			//普通进程
 			pcb[i].Time_slice = SetTimeSlice(pcb[i]);
 			pcb[i].prio = max(100, min(pcb[i].static_prio - GetBonus(pcb[i]) + 5, 139));
-			pcb[i].rt_priority = -1;
 		}
-		else if(pcb[i].static_prio < MAX_RT_PRIO)
+		else
 		{
 			//实时进程
-			pcb[i].rt_priority = pcb[i].static_prio;
 			pcb[i].prio = MAX_RT_PRIO - 1 - pcb[i].rt_priority;
 		}
 		pcb[i].NeedResource[0] = NeedResource[i][0];
@@ -98,11 +97,20 @@ void  Processing::Inital()
 	}
 }
 
+void Processing::Execute()
+{
+
+}
+
 void Processing::Insert_To_Array(PCB pcb)
 {
 }
 
 void Processing::print()
 {
+	for (int i = 0; i < 8; i++)
+	{
+		cout << pcb[i].Time_slice<<endl;
+	}
 }
 
