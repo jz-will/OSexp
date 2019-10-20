@@ -15,6 +15,7 @@
 
 
 extern int TotalResource[3];	//全局变量--资源总和
+extern int TotalTime;
 typedef struct PCB {
 	unsigned int name;
 	int NeedTime;
