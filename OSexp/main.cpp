@@ -11,7 +11,8 @@ int main()
 	Processing sched;
 	sched.Inital();
 	sched.print();
+	sched.Execute();
 	system("pause");
-	BankerCal BankCal;
+	//BankerCal BankCal;
 	return 0;
 }
