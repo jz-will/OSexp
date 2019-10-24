@@ -59,7 +59,7 @@ int Processing::GetBonus(PCB pcb)
 	return bonus;
 }
 
-//初始化：PCB，数组，位图
+//初始化：8个PCB，数组，位图，银行家
 void  Processing::Inital()
 {
 	Runq.array[0].bitmap.reset();
@@ -67,7 +67,7 @@ void  Processing::Inital()
 	int rt_priority[8] = { 2,15,65,99,-1,-1,-1,-1 };
 	int static_prio[8] = { 100,123,130,132,130,122,122,125 };
 	int policy[8] = { SCHED_RR,SCHED_FIFO,SCHED_RR,SCHED_FIFO,SCHED_NORMAL ,SCHED_NORMAL, SCHED_NORMAL, SCHED_NORMAL };
-	int NeedResource[8][3] = { {2,1,5},{1,3,2},{3,5,4},{6,4,1},{5,3,4},{2,5,6},{8,5,3},{5,6,7} };	//A:32, B:32, C:32 -->(8, 8, 8)
+	int Claim[8][3] = { {2,1,5},{1,3,2},{3,5,4},{6,4,1},{5,3,4},{2,5,6},{8,5,3},{5,6,7} };	//A:32, B:32, C:32 -->(8, 8, 8)
 	for (int i = 0; i < 8; i++)
 	{
 		pcb[i].next = NULL;
@@ -92,9 +92,12 @@ void  Processing::Inital()
 			pcb[i].Time_slice = SetTimeSlice(pcb[i]);
 			pcb[i].prio = MAX_RT_PRIO - 1 - pcb[i].rt_priority;		//0-99
 		}
-		pcb[i].NeedResource[0] = NeedResource[i][0];
-		pcb[i].NeedResource[1] = NeedResource[i][1];
-		pcb[i].NeedResource[2] = NeedResource[i][2];
+		pcb[i].Claim[0] = Claim[i][0];
+		pcb[i].Claim[1] = Claim[i][1];
+		pcb[i].Claim[2] = Claim[i][2];
+		pcb[i].Allocation[0] = 0;
+		pcb[i].Allocation[1] = 0;
+		pcb[i].Allocation[2] = 0;
 	}
 	for (int i = 0; i < ARRAY_SIZE; i++)
 	{
@@ -146,11 +149,32 @@ void  Processing::Inital()
 	}
 	cout << "?????";*/
 //	print(Runq.array[0].queue[122]);
+	//初始化空pcb的status为N
+	pcb[8].name = -1;
+	pcb[8].status = 'N';
+	pcb[8].Claim[0] = 0;
+	pcb[8].Claim[1] = 0;
+	pcb[8].Claim[2] = 0;
+	pcb[9].name = -1;
+	pcb[9].status = 'N';
+	pcb[9].Claim[0] = 0;
+	pcb[9].Claim[1] = 0;
+	pcb[9].Claim[2] = 0;
+	banker.__init__(pcb);
 }
 
 void Processing::Execute()
 {
-	int pos = 0;
+	static int pos = 0;
+	int PCBNum = 0;
+	/*for (int i = 0; i < PCBsize; i++)
+	{
+		if (pcb[i].status != 'N')
+		{
+			PCBNum++;
+		}
+	}*/
+	print();
 	if (!Runq.Active->bitmap.any())
 	{
 		cout << "进程已全部运行结束！" << endl;
@@ -166,6 +190,59 @@ void Processing::Execute()
 			q = Runq.Active->queue[i];
 			while (q != NULL)
 			{
+				pos = pos + 1;
+				//安全序列判断和资源分配
+				if (q->status=='W' || q->status =='R')
+				{
+					//while()
+					if (!distriRes(*q, pos))
+					{
+						q->status = 'W';
+					}
+				}
+				/*if ((pos % 5) == 0 && (pcb[pos%PCBNum].status != 'E'))
+				{
+					if (!distriRes(pcb[pos%PCBNum], pos))
+					{
+						pcb[pos%PCBNum].status = 'W';
+					}
+				}*/
+				if (q->status == 'W')
+				{
+					q->sleep_avg = (TotalTime - q->RunTime) / 100;
+					if (q->rt_priority == -1)
+					{
+						q->prio = max(100, min(q->static_prio - GetBonus(*q) + 5, 139));
+					}
+					if (Runq.Expired->queue[q->prio] == NULL)
+					{
+						Runq.Expired->queue[q->prio] = q;
+					}
+					else
+					{
+						PCB *p;
+						p = Runq.Expired->queue[q->prio];
+						while (p != NULL)
+						{
+							p = q->next;
+						}
+						PCB *work = p;
+						p = q;
+						work = p;
+					}
+					Runq.Expired->bitmap.set(q->prio);
+					if (q->next == NULL)
+					{
+						q->prior = Runq.Expired->queue[q->prio];
+						q = q->next;
+						break;
+					}
+					PCB *p;
+					p = q->prior;
+					q->prior = q->next;
+					q = q->next;
+					q->prior = p;
+				}
 				if (q->policy == SCHED_NORMAL)
 				{
 					//普通进程
@@ -175,6 +252,7 @@ void Processing::Execute()
 						TotalTime = TotalTime + q->NeedTime - q->RunTime;
 						q->RunTime = q->NeedTime;
 						q->status = 'E';
+						banker.freeRes(q->name);
 						if (q->next == NULL)
 						{
 							/*PCB *p;
@@ -214,11 +292,18 @@ void Processing::Execute()
 							p = q;
 							work = p;
 						}
-						
 						Runq.Expired->bitmap.set(q->prio);
 						if (q->next == NULL)
 						{
-							q->prior = Runq.Expired->queue[q->prio];
+						//	q->prior = Runq.Expired->queue[q->prio];
+							PCB *work = Runq.Expired->queue[q->prio];
+							while (work != NULL)
+							{
+								work = work->next;
+							}
+							PCB *c = work;
+							work = q->prior;
+							c = work;
 							q = q->next;
 							break;
 						}
@@ -235,6 +320,7 @@ void Processing::Execute()
 					TotalTime = TotalTime + q->NeedTime;
 					q->RunTime = q->NeedTime;
 					q->status = 'E';
+					banker.freeRes(q->name);
 					if (q->next == NULL)
 					{
 						/*PCB *p;
@@ -265,6 +351,7 @@ void Processing::Execute()
 						TotalTime = TotalTime + q->NeedTime - q->RunTime;
 						q->RunTime = q->NeedTime;
 						q->status = 'E';
+						banker.freeRes(q->name);
 						if (q->next == NULL)
 						{
 							/*PCB *p;
@@ -319,12 +406,12 @@ void Processing::Execute()
 					}
 				}
 				
+//				Sleep(1000);
+	//			system("cls");
 			}
-			print();
 			Runq.Active->queue[i] = q;
 			Runq.Active->bitmap.reset(i);
-//			Sleep(1000);
-//			system("cls");
+
 		}
 	}
 	prio_array_t *ex;
@@ -334,18 +421,50 @@ void Processing::Execute()
 	Execute();
 }
 
-void Processing::Insert_To_Array(PCB pcb)
+//插入新的一个PCB
+void Processing::Insert_PCB(PCB p)
 {
+	for (int i = 0; i < PCBsize; i++)
+	{
+		if (pcb[i].status == 'N')
+		{
+			//pcb位置为空，则插入并赋值
+			pcb[i].name = i + 1;
+			pcb[i].status = 'R';
+			pcb[i] = p;
+			Runq.Active->bitmap[pcb[i].prio] = 1;
+			if (Runq.Active->queue[pcb[i].prio] == NULL)
+			{
+				Runq.Active->queue[pcb[i].prio] = &pcb[i];
+				pcb[i].prior = Runq.Active->queue[pcb[i].prio];
+			}
+			else
+			{
+				PCB *q;
+				q = Runq.Active->queue[pcb[i].prio];
+				while (q != NULL)
+				{
+					q = q->next;
+				}
+				q = &pcb[i];
+				pcb[i].prior = Runq.Active->queue[pcb[i].prio];
+				pcb[i].prior->next = q;
+			}
+			return;
+		}
+	}
+
 }
 
 void Processing::print()
 {
 	printf("----------------------------------------------------------------------------\n");
-	printf("-进程名--需要时间--运行时间--时间片--策略--动优--实优--睡眠时间--静优--状态-\n");
+	printf("-进程名--需要时间--运行时间--时间片--策略--动优--实优--睡眠时间--静优--状态--已分配资源--总需资源\n");
 	for (int i = 0; i < 8; i++)
 	{
-		printf("   %d    |   %4d  |  %4d   |  %3d  |%3d  | %3d | %3d |  %3d  |  %3d  |  %c\n", pcb[i].name, pcb[i].NeedTime, pcb[i].RunTime, pcb[i].Time_slice,
-			pcb[i].policy, pcb[i].prio, pcb[i].rt_priority,  pcb[i].sleep_avg, pcb[i].static_prio, pcb[i].status);
+		printf("   %d    |   %4d  |  %4d   |  %3d  |%3d  | %3d | %3d |  %3d  |  %3d  |  %c |  (%d,%d,%d)  |  (%d,%d,%d)\n", pcb[i].name, pcb[i].NeedTime, pcb[i].RunTime, pcb[i].Time_slice,
+			pcb[i].policy, pcb[i].prio, pcb[i].rt_priority,  pcb[i].sleep_avg, pcb[i].static_prio, pcb[i].status,pcb[i].Allocation[0], pcb[i].Allocation[1], pcb[i].Allocation[2],
+			pcb[i].Claim[0], pcb[i].Claim[1], pcb[i].Claim[2]);
 	}
 	printf("----------------------------------------------------------------------------\n");
 }
@@ -353,4 +472,25 @@ void Processing::print()
 void Processing::print(PCB *p)
 {
 	
+}
+
+//资源分配
+bool Processing::distriRes(PCB p, int pos)
+{
+	int req[resKind];
+	for (int i = 0; i < resKind; i++)
+	{
+		/*if(p.policy == SCHED_FIFO)
+		{
+			req[i] = p.Claim[i];
+			if(req[])
+		}*/
+		req[i] = max(0, min((pos % 3), (p.Claim[i] - p.Allocation[i])));//0 1 2
+	}
+	if (req[0] == 0 && req[1] == 0 && req[2] == 0)
+	{
+		//cout << "???";
+		return true;
+	}
+	return banker.allotRes(p.name, req);	//1,0,1
 }
